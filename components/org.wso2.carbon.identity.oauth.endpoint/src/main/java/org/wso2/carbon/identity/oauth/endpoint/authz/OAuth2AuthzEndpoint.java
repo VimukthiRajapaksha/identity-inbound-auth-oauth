@@ -111,6 +111,10 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailProcessor;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailProcessorImpl;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetailContext;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -2509,6 +2513,7 @@ public class OAuth2AuthzEndpoint {
             params.setPkceCodeChallengeMethod(pkceChallengeMethod);
         }
 
+        handleAuthorizationDetails(params, oauthRequest);
         return null;
     }
 
@@ -4634,5 +4639,24 @@ public class OAuth2AuthzEndpoint {
         return ApiAuthnUtils.buildResponseForClientError(
                 new AuthServiceClientException(AuthServiceConstants.ErrorMessage.ERROR_INVALID_AUTH_REQUEST.code(),
                         "App native authentication is only supported with code response type."), log);
+    }
+
+    private void handleAuthorizationDetails(OAuth2Parameters params, OAuthAuthzRequest oauthRequest) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+
+            List<AuthorizationDetails> authorizationDetails = objectMapper
+                    .readValue(oauthRequest.getParam("authorization_details"), objectMapper.getTypeFactory()
+                                    .constructCollectionType(List.class, AuthorizationDetails.class));
+
+            AuthorizationDetailContext context = new AuthorizationDetailContext();
+            context.setOAuth2Parameters(params);
+            context.setAuthorizationDetails(authorizationDetails);
+
+            AuthorizationDetailProcessor processor = new AuthorizationDetailProcessorImpl();
+            log.info("RAR: " + processor.validate(context));
+        } catch (JsonProcessingException e) {
+            log.error("Exception occurred. Caused by, ", e);
+        }
     }
 }

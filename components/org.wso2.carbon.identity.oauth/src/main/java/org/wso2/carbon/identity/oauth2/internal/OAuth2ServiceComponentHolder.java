@@ -110,6 +110,7 @@ public class OAuth2ServiceComponentHolder {
     private AuthorizedAPIManagementService authorizedAPIManagementService;
     private APIResourceManager apiResourceManager;
     private RoleManagementService roleManagementServiceV2;
+    //todo-rar: read rar configs
 
     private OAuth2ServiceComponentHolder() {
 

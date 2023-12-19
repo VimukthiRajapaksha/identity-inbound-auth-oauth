@@ -494,7 +494,7 @@
                         <classpathDependencyExclude>org.ops4j.pax.logging</classpathDependencyExclude>
                         <classpathDependencyExclude>org.wso2.org.ops4j.pax.logging</classpathDependencyExclude>
                     </classpathDependencyExcludes>
-                </configuration>
+                </configuration>successfully
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>

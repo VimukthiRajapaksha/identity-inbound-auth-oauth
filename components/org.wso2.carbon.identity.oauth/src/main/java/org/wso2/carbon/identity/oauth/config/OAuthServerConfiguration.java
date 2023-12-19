@@ -3872,6 +3872,8 @@ public class OAuthServerConfiguration {
                 "SkipOIDCClaimsForClientCredentialGrant";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALGS = "SupportedTokenEndpointSigningAlgorithms";
         private static final String SUPPORTED_TOKEN_ENDPOINT_SIGNING_ALG = "SupportedTokenEndpointSigningAlgorithm";
+
+        //todo-rar: add rar configs
     }
 
 }

@@ -424,6 +424,7 @@ public class OAuth2ServiceComponent {
         boolean restrictUnassignedScopes = Boolean.parseBoolean(System.getProperty(
                 OAuthConstants.RESTRICT_UNASSIGNED_SCOPES));
         OAuth2ServiceComponentHolder.setRestrictUnassignedScopes(restrictUnassignedScopes);
+        //todo-rar: read rar configs
     }
 
     /**
