@@ -111,6 +111,15 @@ import org.wso2.carbon.identity.oauth.endpoint.util.EndpointUtil;
 import org.wso2.carbon.identity.oauth.endpoint.util.OpenIDConnectUserRPStore;
 import org.wso2.carbon.identity.oauth.extension.engine.JSEngine;
 import org.wso2.carbon.identity.oauth.extension.utils.EngineUtils;
+import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCache;
+import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheEntry;
+import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheKey;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailProcessor;
+import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailProcessorImpl;
+import org.wso2.carbon.identity.oauth.rar.internal.AuthorizationDetailProcessorFactory;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetailContext;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.model.ValidationResult;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -173,6 +182,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletContext;
@@ -809,6 +819,8 @@ public class OAuth2AuthzEndpoint {
                 return;
             }
 
+            processAuthorizationDetails(oauth2Params.getSessionDataKey(), oAuthMessage);
+
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
             serviceProvider = getServiceProvider(clientId);
             /*
@@ -911,6 +923,25 @@ public class OAuth2AuthzEndpoint {
                     ": " + oauth2Params.getSessionDataKey(), e);
         }
 
+    }
+
+    private void processAuthorizationDetails(String sessionDataKey, OAuthMessage oAuthMessage) {
+
+        String authorizationDetailsIdPrefix = "authorization_details_id_";
+        AuthorizationDetailCacheKey currentCacheKey = new AuthorizationDetailCacheKey(sessionDataKey);
+        AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
+                .getValueFromCache(currentCacheKey);
+
+        Collections.list(oAuthMessage.getRequest().getParameterNames()).stream()
+                .filter(parameterName -> parameterName.startsWith(authorizationDetailsIdPrefix))
+                .map(parameterName -> parameterName.substring(authorizationDetailsIdPrefix.length()))
+                .forEach(id -> authorizationDetailCacheEntry
+                        .setConsentedAuthorizationDetails(authorizationDetailCacheEntry
+                                .getRequestedAuthorizationDetails().stream()
+                                .filter(ad -> String.valueOf(ad.getId()).equals(id))
+                                .collect(Collectors.toList())
+                        )
+                );
     }
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
@@ -1549,6 +1580,7 @@ public class OAuth2AuthzEndpoint {
             oauthResponse =
                     handleSuccessAuthorization(oAuthMessage, sessionState, oauth2Params, responseType, authzRespDTO,
                             authorizationResponseDTO);
+            updateAuthorizationDetailCacheKey(oauth2Params.getSessionDataKey(), authzRespDTO.getAuthorizationCode());
         } else if (isFailureAuthorizationWithErrorCode(authzRespDTO)) {
             // Authorization failure due to various reasons
             return handleFailureAuthorization(oAuthMessage, sessionState, oauth2Params, authzRespDTO,
@@ -2506,7 +2538,95 @@ public class OAuth2AuthzEndpoint {
             params.setPkceCodeChallengeMethod(pkceChallengeMethod);
         }
 
+        if (isRichAuthorizationRequest(oauthRequest)) {
+            handleAuthorizationDetails(params, oauthRequest);
+        }
+
         return null;
+    }
+
+    private static final String AUTHORIZATION_DETAILS = "authorization_details";
+
+    private boolean isRichAuthorizationRequest(OAuthAuthzRequest oauthRequest) {
+        return StringUtils.isNotBlank(oauthRequest.getParam(AUTHORIZATION_DETAILS));
+    }
+
+    private void handleAuthorizationDetails(OAuth2Parameters params, OAuthAuthzRequest oauthRequest) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            List<AuthorizationDetails> authorizationDetails = objectMapper
+                    .readValue(oauthRequest.getParam(AUTHORIZATION_DETAILS), objectMapper.getTypeFactory()
+                            .constructCollectionType(List.class, AuthorizationDetails.class));
+
+            AuthorizationDetailProcessorFactory authorizationDetailProcessorFactory =
+                    AuthorizationDetailProcessorFactory.getInstance();
+
+            // todo: register after reading this from configs
+//            AuthorizationDetailProcessor authorizationDetailProcessorClz =
+//                    getAuthorizationDetailProcessorInstanceFromFQN("org.fdx.rar.processor.FdxRarProcessor");
+//
+//            authorizationDetailProcessorFactory.registerAuthorizationDetailProcessor("payment_initiation",
+//                    new AuthorizationDetailProcessorImpl());
+
+            List<AuthorizationDetails> validatedAuthorizationDetails = new ArrayList<>();
+            for (AuthorizationDetails authorizationDetail: authorizationDetails) {
+                if (authorizationDetailProcessorFactory
+                        .isSupportedAuthorizationDetailType(authorizationDetail.getType())) {
+
+                    AuthorizationDetailProcessor authorizationDetailProcessor = authorizationDetailProcessorFactory
+                            .getAuthorizationDetailProcessor(authorizationDetail.getType());
+
+                    AuthorizationDetailContext authorizationDetailContext =
+                            new AuthorizationDetailContext(params, authorizationDetail);
+
+                    ValidationResult validationResult = authorizationDetailProcessor
+                            .validate(authorizationDetailContext);
+
+                    log.info("RAR Result: " + validationResult);
+
+                    if (validationResult.isValid()) {
+                        validatedAuthorizationDetails.add(authorizationDetail);
+                    } else {
+                        log.error(String.format("Invalid authorization_detail received. Reason: %s",
+                                validationResult.getReason()));
+                    }
+                }
+            }
+            addAuthorizationDetailToCache(params.getSessionDataKey(), validatedAuthorizationDetails);
+
+        } catch (JsonProcessingException e) {
+            log.error("Exception occurred. Caused by, ", e);
+        }
+    }
+
+    private AuthorizationDetailProcessor getAuthorizationDetailProcessorInstanceFromFQN(String fqn) {
+        try {
+            return (AuthorizationDetailProcessor) Class.forName(fqn).newInstance();
+        } catch (ClassNotFoundException e) {
+            log.error("Unable to find the AuthorizationDetailProcessor class implementation", e);
+        } catch (InstantiationException | IllegalAccessException e) {
+            log.error("Error occurred while loading the AuthorizationDetailProcessor class implementation", e);
+        }
+        return null;
+    }
+
+    private void addAuthorizationDetailToCache(final String sessionDataKey,
+                                               final List<AuthorizationDetails> validatedAuthorizationDetails) {
+
+        AuthorizationDetailCacheEntry cacheEntry = new AuthorizationDetailCacheEntry();
+        cacheEntry.setRequestedAuthorizationDetails(validatedAuthorizationDetails);
+
+        AuthorizationDetailCache.getInstance().addToCache(new AuthorizationDetailCacheKey(sessionDataKey), cacheEntry);
+    }
+
+    private void updateAuthorizationDetailCacheKey(final String sessionDataKey, final String authorizationCode) {
+
+        AuthorizationDetailCacheKey currentCacheKey = new AuthorizationDetailCacheKey(sessionDataKey);
+        AuthorizationDetailCacheEntry cacheEntry = AuthorizationDetailCache.getInstance()
+                .getValueFromCache(currentCacheKey);
+        AuthorizationDetailCache.getInstance().clearCacheEntry(currentCacheKey);
+        AuthorizationDetailCacheKey newCacheKey = new AuthorizationDetailCacheKey(authorizationCode);
+        AuthorizationDetailCache.getInstance().addToCache(newCacheKey, cacheEntry);
     }
 
     private String getSpTenantDomain(String clientId) throws InvalidRequestException {

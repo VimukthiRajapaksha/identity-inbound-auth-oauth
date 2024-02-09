@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.model;
 
+//import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -298,4 +300,15 @@ public class OAuth2Parameters implements Serializable {
 
         this.isRequestObjectFlow = isRequestObjectFlow;
     }
+
+//    private Set<AuthorizationDetails> authorizationDetails;
+//
+//    public Set<AuthorizationDetails> getAuthorizationDetails() {
+//        return authorizationDetails;
+//    }
+//
+//    public void setAuthorizationDetails(Set<AuthorizationDetails> authorizationDetails) {
+//        this.authorizationDetails = authorizationDetails;
+//    }
+
 }

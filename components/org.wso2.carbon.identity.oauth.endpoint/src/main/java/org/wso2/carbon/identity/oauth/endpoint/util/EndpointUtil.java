@@ -83,6 +83,10 @@ import org.wso2.carbon.identity.oauth.endpoint.exception.InvalidRequestException
 import org.wso2.carbon.identity.oauth.endpoint.exception.TokenEndpointBadRequestException;
 import org.wso2.carbon.identity.oauth.endpoint.message.OAuthMessage;
 import org.wso2.carbon.identity.oauth.par.core.ParAuthService;
+import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCache;
+import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheEntry;
+import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheKey;
+import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -842,13 +846,23 @@ public class EndpointUtil {
                 if (entry != null) {
                     user = entry.getLoggedInUser();
                 }
+
+                AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
+                        .getValueFromCache(new AuthorizationDetailCacheKey(sessionDataKey));
+                List<AuthorizationDetails> authorizationDetails = authorizationDetailCacheEntry
+                        .getRequestedAuthorizationDetails();
+                if (authorizationDetails != null) {
+                    consentPageUrl = consentPageUrl + "&" + "authorization_details" + "=" + URLEncoder
+                            .encode(new Gson().toJson(authorizationDetails), UTF_8);
+                }
+
                 List<String> consentRequiredScopesList = filterConsentRequiredScopes(user, params);
                 params.setConsentRequiredScopes(new HashSet<>(consentRequiredScopesList));
                 String consentRequiredScopes = getConsentRequiredScopesAsString(params.getConsentRequiredScopes());
 
                 consentPageUrl = consentPageUrl + "&" + OAuthConstants.OAuth20Params.SCOPE + "=" + URLEncoder.encode
                         (consentRequiredScopes, UTF_8) + "&" + OAuthConstants.SESSION_DATA_KEY_CONSENT
-                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "&spQueryParams=" + queryString;
+                        + "=" + URLEncoder.encode(sessionDataKeyConsent, UTF_8) + "&" + "spQueryParams=" + queryString;
 
                 // Append scope metadata to additionalQueryParams.
                 String scopeMetadataQueryParam = getScopeMetadataQueryParam(params.getConsentRequiredScopes(),
