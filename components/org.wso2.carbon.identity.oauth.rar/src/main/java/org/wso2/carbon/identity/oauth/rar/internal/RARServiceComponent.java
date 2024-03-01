@@ -49,6 +49,11 @@ public class RARServiceComponent {
         }
         AuthorizationDetailProcessorFactory.getInstance()
                 .registerAuthorizationDetailProcessor(authorizationDetailProcessor);
+        // todo: remove the below two dummy registrations
+        AuthorizationDetailProcessorFactory.getInstance()
+                .registerAuthorizationDetailProcessor("payment_initiation", authorizationDetailProcessor);
+        AuthorizationDetailProcessorFactory.getInstance()
+                .registerAuthorizationDetailProcessor("account_information", authorizationDetailProcessor);
     }
 
     protected void unsetAuthorizationDetailProcessor(AuthorizationDetailProcessor authorizationDetailProcessor) {
@@ -61,7 +66,7 @@ public class RARServiceComponent {
             LOG.debug("Un-setting authorizationDetailProcessor :" + authorizationDetailProcessor.getClass().getName());
         }
 
-        AuthorizationDetailProcessorFactory.getInstance().registerAuthorizationDetailProcessor(null);
+        AuthorizationDetailProcessorFactory.getInstance()
+                .registerAuthorizationDetailProcessor(authorizationDetailProcessor);
     }
-
 }

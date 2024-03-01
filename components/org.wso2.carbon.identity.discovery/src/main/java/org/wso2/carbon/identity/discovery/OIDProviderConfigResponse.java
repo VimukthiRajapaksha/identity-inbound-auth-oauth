@@ -81,6 +81,7 @@ public class OIDProviderConfigResponse {
     private String deviceAuthorizationEndpoint;
     private String webFingerEndpoint;
     private Boolean tlsClientCertificateBoundAccessTokens;
+    private String[] authorizationDetailsTypesSupported;
 
     public String getIssuer() {
         return issuer;
@@ -514,6 +515,14 @@ public class OIDProviderConfigResponse {
         this.tlsClientCertificateBoundAccessTokens = tlsClientCertificateBoundAccessTokens;
     }
 
+    public String[] getAuthorizationDetailsTypesSupported() {
+        return authorizationDetailsTypesSupported;
+    }
+
+    public void setAuthorizationDetailsTypesSupported(String[] authorizationDetailsTypesSupported) {
+        this.authorizationDetailsTypesSupported = authorizationDetailsTypesSupported;
+    }
+
     public Map<String, Object> getConfigMap() {
         Map<String, Object> configMap = new HashMap<String, Object>();
         configMap.put(DiscoveryConstants.ISSUER.toLowerCase(), this.issuer);
@@ -581,6 +590,8 @@ public class OIDProviderConfigResponse {
         configMap.put(DiscoveryConstants.WEBFINGER_ENDPOINT.toLowerCase(), this.webFingerEndpoint);
         configMap.put(DiscoveryConstants.TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN.toLowerCase(),
                 this.tlsClientCertificateBoundAccessTokens);
+        configMap.put(DiscoveryConstants.AUTHORIZATION_DETAILS_TYPES_SUPPORTED,
+                this.authorizationDetailsTypesSupported);
         return configMap;
     }
 }

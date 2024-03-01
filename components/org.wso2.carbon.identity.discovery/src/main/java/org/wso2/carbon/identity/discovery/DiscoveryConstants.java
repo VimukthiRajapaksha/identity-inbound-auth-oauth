@@ -370,4 +370,6 @@ public class DiscoveryConstants {
      * If omitted, the default value is false.
      */
     public static final String TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKEN = "tls_client_certificate_bound_access_tokens";
+
+    public static final String AUTHORIZATION_DETAILS_TYPES_SUPPORTED = "authorization_details_types_supported";
 }

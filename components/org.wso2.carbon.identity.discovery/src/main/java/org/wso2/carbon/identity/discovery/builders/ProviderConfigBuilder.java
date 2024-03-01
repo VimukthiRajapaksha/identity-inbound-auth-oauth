@@ -30,6 +30,7 @@ import org.wso2.carbon.identity.discovery.OIDProviderConfigResponse;
 import org.wso2.carbon.identity.discovery.OIDProviderRequest;
 import org.wso2.carbon.identity.discovery.internal.OIDCDiscoveryDataHolder;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
+import org.wso2.carbon.identity.oauth.rar.internal.AuthorizationDetailProcessorFactory;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.OAuth2Constants;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -148,6 +149,15 @@ public class ProviderConfigBuilder {
         providerConfig.setWebFingerEndpoint(OAuth2Util.OAuthURL.getOidcWebFingerEPUrl());
         providerConfig.setTlsClientCertificateBoundAccessTokens(OAuth2Util.getSupportedTokenBindingTypes()
                 .contains(OAuth2Constants.TokenBinderType.CERTIFICATE_BASED_TOKEN_BINDER));
+
+        Set<String> supportedAuthorizationDetailTypes = AuthorizationDetailProcessorFactory.getInstance()
+                .getSupportedAuthorizationDetailTypes();
+        if (supportedAuthorizationDetailTypes != null) {
+            int supportedAuthorizationDetailTypesSize = supportedAuthorizationDetailTypes.size();
+            providerConfig.setAuthorizationDetailsTypesSupported(
+                    supportedAuthorizationDetailTypes.toArray(new String[supportedAuthorizationDetailTypesSize]));
+        }
+
         return providerConfig;
     }
 }

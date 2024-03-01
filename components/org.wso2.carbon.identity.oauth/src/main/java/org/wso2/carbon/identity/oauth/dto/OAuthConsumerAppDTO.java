@@ -64,6 +64,7 @@ public class OAuthConsumerAppDTO {
     private String requestObjectEncryptionMethod;
     private String jwksURI;
     private boolean fapiConformanceEnabled;
+    private String[] authorizationDetailsTypes;
 
     public String getJwksURI() {
 
@@ -427,6 +428,14 @@ public class OAuthConsumerAppDTO {
     public void setFapiConformanceEnabled(boolean fapiConformant) {
 
         fapiConformanceEnabled = fapiConformant;
+    }
+
+    public String[] getAuthorizationDetailsTypes() {
+        return authorizationDetailsTypes;
+    }
+
+    public void setAuthorizationDetailsTypes(String[] authorizationDetailsTypes) {
+        this.authorizationDetailsTypes = authorizationDetailsTypes;
     }
 }
 

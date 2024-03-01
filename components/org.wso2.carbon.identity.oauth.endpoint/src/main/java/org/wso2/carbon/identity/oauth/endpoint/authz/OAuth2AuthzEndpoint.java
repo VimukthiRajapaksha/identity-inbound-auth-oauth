@@ -115,7 +115,6 @@ import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCache;
 import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheEntry;
 import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheKey;
 import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailProcessor;
-import org.wso2.carbon.identity.oauth.rar.core.AuthorizationDetailProcessorImpl;
 import org.wso2.carbon.identity.oauth.rar.internal.AuthorizationDetailProcessorFactory;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetailContext;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
@@ -2561,13 +2560,6 @@ public class OAuth2AuthzEndpoint {
             AuthorizationDetailProcessorFactory authorizationDetailProcessorFactory =
                     AuthorizationDetailProcessorFactory.getInstance();
 
-            // todo: register after reading this from configs
-//            AuthorizationDetailProcessor authorizationDetailProcessorClz =
-//                    getAuthorizationDetailProcessorInstanceFromFQN("org.fdx.rar.processor.FdxRarProcessor");
-//
-//            authorizationDetailProcessorFactory.registerAuthorizationDetailProcessor("payment_initiation",
-//                    new AuthorizationDetailProcessorImpl());
-
             List<AuthorizationDetails> validatedAuthorizationDetails = new ArrayList<>();
             for (AuthorizationDetails authorizationDetail: authorizationDetails) {
                 if (authorizationDetailProcessorFactory
@@ -2597,17 +2589,6 @@ public class OAuth2AuthzEndpoint {
         } catch (JsonProcessingException e) {
             log.error("Exception occurred. Caused by, ", e);
         }
-    }
-
-    private AuthorizationDetailProcessor getAuthorizationDetailProcessorInstanceFromFQN(String fqn) {
-        try {
-            return (AuthorizationDetailProcessor) Class.forName(fqn).newInstance();
-        } catch (ClassNotFoundException e) {
-            log.error("Unable to find the AuthorizationDetailProcessor class implementation", e);
-        } catch (InstantiationException | IllegalAccessException e) {
-            log.error("Error occurred while loading the AuthorizationDetailProcessor class implementation", e);
-        }
-        return null;
     }
 
     private void addAuthorizationDetailToCache(final String sessionDataKey,

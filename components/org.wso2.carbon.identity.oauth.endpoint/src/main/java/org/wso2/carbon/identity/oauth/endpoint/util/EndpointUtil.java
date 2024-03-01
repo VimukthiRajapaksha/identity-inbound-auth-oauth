@@ -87,6 +87,7 @@ import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCache;
 import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheEntry;
 import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheKey;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.service.AuthorizationDetailService;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeConsentException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -847,10 +848,12 @@ public class EndpointUtil {
                     user = entry.getLoggedInUser();
                 }
 
-                AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
-                        .getValueFromCache(new AuthorizationDetailCacheKey(sessionDataKey));
-                List<AuthorizationDetails> authorizationDetails = authorizationDetailCacheEntry
-                        .getRequestedAuthorizationDetails();
+//                AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
+//                        .getValueFromCache(new AuthorizationDetailCacheKey(sessionDataKey));
+//                List<AuthorizationDetails> authorizationDetails = authorizationDetailCacheEntry
+//                        .getRequestedAuthorizationDetails();
+                List<AuthorizationDetails> authorizationDetails = AuthorizationDetailService.getInstance()
+                        .getRequestedAuthorizationDetailsFromCache(sessionDataKey);
                 if (authorizationDetails != null) {
                     consentPageUrl = consentPageUrl + "&" + "authorization_details" + "=" + URLEncoder
                             .encode(new Gson().toJson(authorizationDetails), UTF_8);

@@ -90,6 +90,7 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     private String requestObjectEncryptionAlgorithm;
     private String requestObjectEncryptionMethod;
     private boolean fapiConformanceEnabled;
+    private String[] authorizationDetailsTypes;
 
     public AuthenticatedUser getAppOwner() {
 
@@ -470,5 +471,13 @@ public class OAuthAppDO extends InboundConfigurationProtocol implements Serializ
     public void setFapiConformanceEnabled(boolean fapiConformant) {
 
         fapiConformanceEnabled = fapiConformant;
+    }
+
+    public String[] getAuthorizationDetailsTypes() {
+        return authorizationDetailsTypes;
+    }
+
+    public void setAuthorizationDetailsTypes(String[] authorizationDetailsTypes) {
+        this.authorizationDetailsTypes = authorizationDetailsTypes;
     }
 }
