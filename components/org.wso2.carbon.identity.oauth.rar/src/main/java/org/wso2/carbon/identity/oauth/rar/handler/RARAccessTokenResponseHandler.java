@@ -10,6 +10,7 @@ import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCache;
 import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheEntry;
 import org.wso2.carbon.identity.oauth.rar.cache.AuthorizationDetailCacheKey;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
+import org.wso2.carbon.identity.oauth.rar.service.AuthorizationDetailService;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.handlers.response.AccessTokenResponseHandler;
@@ -26,7 +27,21 @@ import static org.wso2.carbon.identity.oauth.rar.util.AuthorizationDetailConstan
 public class RARAccessTokenResponseHandler implements AccessTokenResponseHandler {
     private static final ObjectMapper OBJECT_MAPPER = new JsonMapper();
     private static final Log LOG = LogFactory.getLog(RARAccessTokenResponseHandler.class);
+
     @Override
+//    public Map<String, Object> getAdditionalTokenResponseAttributes(OAuthTokenReqMessageContext tokReqMsgCtx)
+//            throws IdentityOAuth2Exception {
+//
+//        List<AuthorizationDetails> authorizationDetails = AuthorizationDetailService.getInstance()
+//                .getConsentedAuthorizationDetailsByAuthzCode(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getAuthorizationCode());
+//
+//        Map<String, Object> additionalAttributes = new HashMap<>();
+//        if (isNotEmptyList(authorizationDetails)) {
+//            additionalAttributes.put(AUTHORIZATION_DETAILS, convertToJsonArray(authorizationDetails));
+//        }
+//        return additionalAttributes;
+//    }
+
     public Map<String, Object> getAdditionalTokenResponseAttributes(OAuthTokenReqMessageContext tokReqMsgCtx)
             throws IdentityOAuth2Exception {
 
@@ -47,6 +62,7 @@ public class RARAccessTokenResponseHandler implements AccessTokenResponseHandler
         }
         return additionalAttributes;
     }
+
 
     private boolean isNotEmptyList(List<AuthorizationDetails> list) {
         return list != null && !list.isEmpty();

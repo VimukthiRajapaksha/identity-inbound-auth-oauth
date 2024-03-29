@@ -12,8 +12,10 @@ import org.wso2.carbon.identity.oauth.rar.dao.AuthorizationDetailDAO;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -35,6 +37,25 @@ public class AuthorizationDetailService {
             instance = new AuthorizationDetailService();
         }
         return instance;
+    }
+
+    public void addRequestedAuthorizationDetailsToCache(final String sessionDataKey,
+                                                        final List<AuthorizationDetails> validatedAuthorizationDetails) {
+
+        AuthorizationDetailCacheEntry cacheEntry = new AuthorizationDetailCacheEntry();
+        cacheEntry.setRequestedAuthorizationDetails(validatedAuthorizationDetails);
+
+        AuthorizationDetailCache.getInstance().addToCache(new AuthorizationDetailCacheKey(sessionDataKey), cacheEntry);
+    }
+
+    public List<AuthorizationDetails> getRequestedAuthorizationDetailsFromCache(final String sessionDataKey) {
+        AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
+                .getValueFromCache(new AuthorizationDetailCacheKey(sessionDataKey));
+        if (authorizationDetailCacheEntry != null) {
+            return authorizationDetailCacheEntry.getRequestedAuthorizationDetails();
+        } else {
+            return new ArrayList<>();
+        }
     }
 
     public String[] getAuthorizationDetailsTypesByConsumerKey(final String consumerKey) {
@@ -96,39 +117,49 @@ public class AuthorizationDetailService {
                 .toArray(String[]::new);
     }
 
-    public void addRequestedAuthorizationDetailsToCache(final String sessionDataKey,
-                                                        final List<AuthorizationDetails> validatedAuthorizationDetails) {
-
-        AuthorizationDetailCacheEntry cacheEntry = new AuthorizationDetailCacheEntry();
-        cacheEntry.setRequestedAuthorizationDetails(validatedAuthorizationDetails);
-
-        AuthorizationDetailCache.getInstance().addToCache(new AuthorizationDetailCacheKey(sessionDataKey), cacheEntry);
-    }
-
-    public List<AuthorizationDetails> getRequestedAuthorizationDetailsFromCache(final String sessionDataKey) {
-        AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
-                .getValueFromCache(new AuthorizationDetailCacheKey(sessionDataKey));
-        return authorizationDetailCacheEntry.getRequestedAuthorizationDetails();
-    }
-
-    public void persistConsentedAuthorizationDetails(String authorizationCode,
+    public void persistConsentedAuthorizationDetails(String userId, String appId, String authorizationCode,
                                                      List<AuthorizationDetails> consentedAuthorizationDetails) {
-
-        AuthorizationDetailCacheEntry authorizationDetailCacheEntry = AuthorizationDetailCache.getInstance()
-                .getValueFromCache(new AuthorizationDetailCacheKey(authorizationCode));
-        authorizationDetailCacheEntry
-                .setConsentedAuthorizationDetails(consentedAuthorizationDetails);
 
         consentedAuthorizationDetails.forEach(authorizationDetail ->
         {
             try {
-                this.authorizationDetailDAO.createConsentedAuthorizationDetails(
-                        authorizationDetail.getType(), gson.toJson(authorizationDetail),
-                        authorizationCode, IdentityTenantUtil.getLoginTenantId());
+                final String authorizationDetailJson = gson.toJson(authorizationDetail);
+                this.authorizationDetailDAO.createCodeAuthorizationDetails(authorizationDetail.getType(),
+                        authorizationDetailJson, authorizationCode, IdentityTenantUtil.getLoginTenantId());
+                this.authorizationDetailDAO.bindAuthorizationDetailsToConsent(authorizationDetail.getType(),
+                        authorizationDetailJson, userId, appId, IdentityTenantUtil.getLoginTenantId());
             } catch (SQLException e) {
                 LOG.error("Error occurred while persisting consented authorization details. Caused by, ", e);
             }
         });
     }
 
+//    public List<AuthorizationDetails> getConsentedAuthorizationDetailsByAuthzCode(String authorizationCode) {
+//
+//        try {
+//            return this.authorizationDetailDAO.findConsentedAuthorizationDetailsByAuthzCode(authorizationCode,
+//                            IdentityTenantUtil.getLoginTenantId()).stream()
+//                    .map(authorizationDetailStr -> gson.fromJson(authorizationDetailStr, AuthorizationDetails.class))
+//                    .collect(Collectors.toList());
+//
+//        } catch (SQLException e) {
+//            LOG.error("Error occurred while persisting consented authorization details. Caused by, ", e);
+//        }
+//        return new ArrayList<>();
+//    }
+
+//    public void bindAuthorizationDetailsTypesToConsent(String userId, String appId,
+//                                                       List<AuthorizationDetails> consentedAuthorizationDetails) {
+//        try {
+//            boolean isUserConsentExist = oAuth2ScopeService.isUserHasAnExistingConsentForApp(
+//                    userId, appId, IdentityTenantUtil.getLoginTenantId());
+//            if (isUserConsentExist) {
+//
+//                this.authorizationDetailDAO.bindAuthorizationDetailsToConsent();
+//            }
+//
+//        } catch (IdentityOAuth2ScopeException e) {
+//            LOG.error("Error occurred while persisting consented authorization details. Caused by, ", e);
+//        }
+//    }
 }

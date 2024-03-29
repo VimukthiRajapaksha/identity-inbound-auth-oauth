@@ -301,7 +301,7 @@ public class OAuthUserConsentedScopesDAOImpl implements OAuthUserConsentedScopes
         return UUID.randomUUID().toString();
     }
 
-    private String getConsentId(Connection connection, String userId, String appId, int tenantId) throws SQLException {
+    public String getConsentId(Connection connection, String userId, String appId, int tenantId) throws SQLException {
 
         String consentId = null;
         try (PreparedStatement ps = connection.prepareStatement(SQLQueries.GET_CONSENT_ID_FOR_CONSENT)) {

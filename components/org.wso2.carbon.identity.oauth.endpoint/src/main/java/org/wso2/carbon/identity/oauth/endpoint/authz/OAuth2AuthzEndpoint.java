@@ -119,6 +119,7 @@ import org.wso2.carbon.identity.oauth.rar.internal.AuthorizationDetailProcessorF
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetailContext;
 import org.wso2.carbon.identity.oauth.rar.model.AuthorizationDetails;
 import org.wso2.carbon.identity.oauth.rar.model.ValidationResult;
+import org.wso2.carbon.identity.oauth.rar.service.AuthorizationDetailService;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ClientException;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2ScopeException;
@@ -818,7 +819,7 @@ public class OAuth2AuthzEndpoint {
                 return;
             }
 
-            processAuthorizationDetails(oauth2Params.getSessionDataKey(), oAuthMessage);
+            // processAuthorizationDetails(oauth2Params.getSessionDataKey(), oAuthMessage);
 
             List<Integer> approvedClaimIds = getUserConsentClaimIds(oAuthMessage);
             serviceProvider = getServiceProvider(clientId);
@@ -941,6 +942,47 @@ public class OAuth2AuthzEndpoint {
                                 .collect(Collectors.toList())
                         )
                 );
+    }
+
+    private void addConsentedAuthorizationDetails(OAuth2Parameters oauth2Params, String authorizationCode,
+                                                  OAuthMessage oAuthMessage) {
+
+        String authorizationDetailsIdPrefix = "authorization_details_id_";
+        List<Integer> consentedAuthorizationDetailsTypes = oAuthMessage.getRequest().getParameterMap().keySet().stream()
+                .filter(parameterName -> parameterName.startsWith(authorizationDetailsIdPrefix))
+                .map(parameterName -> Integer.parseInt(parameterName.substring(authorizationDetailsIdPrefix.length())))
+                .collect(Collectors.toList());
+
+        List<AuthorizationDetails> requestedAuthorizationDetails = AuthorizationDetailService.getInstance()
+                        .getRequestedAuthorizationDetailsFromCache(oauth2Params.getSessionDataKey());
+
+        List<AuthorizationDetails> consentedAuthorizationDetails = requestedAuthorizationDetails.stream()
+                .filter(authorizationDetail -> consentedAuthorizationDetailsTypes.contains(authorizationDetail.getId()))
+                .collect(Collectors.toList());
+
+        try {
+            String appId = null;
+            String userId = null;
+            ServiceProvider serviceProvider = OAuth2Util.getServiceProvider(oauth2Params.getClientId());
+            if (serviceProvider != null) {
+                appId = serviceProvider.getApplicationResourceId();
+            }
+
+            AuthenticatedUser loggedInUser = oAuthMessage.getSessionDataCacheEntry().getLoggedInUser();
+            if (loggedInUser != null) {
+                userId = loggedInUser.getUserId();
+            }
+
+            if (StringUtils.isNotBlank(appId) && StringUtils.isNotBlank(userId)) {
+                AuthorizationDetailService.getInstance()
+                    .persistConsentedAuthorizationDetails(userId, appId, authorizationCode, consentedAuthorizationDetails);
+            }
+        } catch (IdentityOAuth2Exception e) {
+            log.error("Error occurred while retrieving SP from client ID: " + oauth2Params.getClientId() + " Caused by, ", e);
+        } catch (UserIdNotFoundException e) {
+            log.error("Error occurred while retrieving authenticated user. Caused by, ", e);
+        }
+
     }
 
     private ConsentClaimsData getConsentRequiredClaims(AuthenticatedUser user, ServiceProvider serviceProvider,
@@ -1579,7 +1621,8 @@ public class OAuth2AuthzEndpoint {
             oauthResponse =
                     handleSuccessAuthorization(oAuthMessage, sessionState, oauth2Params, responseType, authzRespDTO,
                             authorizationResponseDTO);
-            updateAuthorizationDetailCacheKey(oauth2Params.getSessionDataKey(), authzRespDTO.getAuthorizationCode());
+            addConsentedAuthorizationDetails(oauth2Params, authzRespDTO.getAuthorizationCode(), oAuthMessage);
+            // updateAuthorizationDetailCacheKey(oauth2Params.getSessionDataKey(), authzRespDTO.getAuthorizationCode());
         } else if (isFailureAuthorizationWithErrorCode(authzRespDTO)) {
             // Authorization failure due to various reasons
             return handleFailureAuthorization(oAuthMessage, sessionState, oauth2Params, authzRespDTO,
@@ -2450,7 +2493,7 @@ public class OAuth2AuthzEndpoint {
         return StringUtils.EMPTY;
     }
 
-    private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
+        private String populateOauthParameters(OAuth2Parameters params, OAuthMessage oAuthMessage,
                                            OAuth2ClientValidationResponseDTO validationResponse,
                                            OAuthAuthzRequest oauthRequest)
             throws OAuthSystemException, InvalidRequestException {
@@ -2584,7 +2627,9 @@ public class OAuth2AuthzEndpoint {
                     }
                 }
             }
-            addAuthorizationDetailToCache(params.getSessionDataKey(), validatedAuthorizationDetails);
+            // addAuthorizationDetailToCache(params.getSessionDataKey(), validatedAuthorizationDetails);
+            AuthorizationDetailService.getInstance()
+                    .addRequestedAuthorizationDetailsToCache(params.getSessionDataKey(), validatedAuthorizationDetails);
 
         } catch (JsonProcessingException e) {
             log.error("Exception occurred. Caused by, ", e);
